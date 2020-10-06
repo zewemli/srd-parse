@@ -3,8 +3,9 @@ from pdfminer.layout import LTTextContainer, LTChar, LTAnno, LTText
 
 import os, sys
 import random
-
+from tqdm import tqdm
 import argparse
+import json
 
 class Word:
     def __init__(self):
@@ -74,7 +75,7 @@ def emit_words(stream):
     for x in stream:
         if x.get_text() == u'\t\r \xa0' or x.get_text() == '\n':
             if len(word):
-                yield Word(word)
+                yield Word.fromChars(word)
                 word = []
         else:
             word.append(x)
@@ -87,16 +88,14 @@ def gen_containers_from_page(page):
 
 parser = argparse.ArgumentParser(description="parser for SRD")
 parser.add_argument("filepath", help="Path to the SRD 5.1")
+parser.add_argument("output_dir", help="Output directory")
 parser.add_argument("--page", "-p", type=int, help="Only parse this one page") 
 
 args = parser.parse_args()
 
-for page_num, page_layout in enumerate(extract_pages( args.filepath  ), start=1):
+os.makedirs(args.output_dir, exist_ok=True)
 
-    if args.page is None or page_num == args.page:
-
-        words = list( emit_words( gen_containers_from_page(page_layout)  ))
-        for w in words:
-            print(w.text, w.sbox, w.fonts)
-    elif args.page and args.page < page_num:
-        break
+for page_num, page_layout in tqdm(enumerate(extract_pages( args.filepath  ), start=1), desc='parsing'):
+    words = list( emit_words( gen_containers_from_page(page_layout)  ))
+    with open(os.path.join(args.output_dir, 'page-%s.json' % str(page_num).zfill(4)), 'wt') as fpage:
+        json.dump([x.toDict() for x in words], fpage)
