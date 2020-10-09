@@ -11,21 +11,29 @@ import string
 from srd_parse.datastructs import Word
 
 def emit_words(stream):
+    punct = set(string.punctuation)
+
     word = []
     space = False
     pfont = None
     for x in stream:
         if hasattr(x,'fontname') and hasattr(x,'bbox'):
             font = x.fontname
-            if x.get_text() == u'\t\r \xa0' or x.get_text() == '\n':
+            xchar = x.get_text()
+            if xchar == u'\t\r \xa0' or xchar == '\n':
                 if len(word):
                     yield Word.fromChars(word)
                     word = []
-            elif font != pfont or x.get_text() == string.punctuation:
+            elif font != pfont:
                 # New 'term'
                 if len(word):
                     yield Word.fromChars(word)
                 word = [x]
+            elif xchar in punct:
+                if len(word):
+                    yield Word.fromChars(word)
+                yield Word.fromChars([x])
+                word = []
             else:
                 word.append(x)
 

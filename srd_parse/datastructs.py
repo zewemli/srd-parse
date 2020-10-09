@@ -33,8 +33,6 @@ class Word:
         self.width = x1 - x0
         self.height = y1 - y0
         self.sbox = ((x0, y0), (self.width, self.height))
-    
-        self.chars = [c.get_text() for c in chars]
         self.font = chars[0].fontname
         
         return self
@@ -48,12 +46,8 @@ class Word:
         return self
 
     def toDict(self):
-        if self.text.startswith("Honesty"):
-            print(self.text, self.chars[-1] in string.punctuation)
-
         return {"text": self.text,
                 "font": self.font,
-                "chars": self.chars,
                 "box": [self.x0, self.y0, self.x1, self.y1]}
 
     @classmethod
@@ -62,6 +56,5 @@ class Word:
         self.x0, self.y0, self.x1, self.y1 = d['box']
         self.font = d['font']
         self.text = d['text']
-        self.chars = d['chars']
         self.setDims()
         return self
