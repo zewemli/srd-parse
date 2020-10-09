@@ -6,19 +6,30 @@ import random
 from tqdm import tqdm
 import argparse
 import json
+import string
 
 from srd_parse.datastructs import Word
 
 def emit_words(stream):
     word = []
     space = False
+    pfont = None
     for x in stream:
-        if x.get_text() == u'\t\r \xa0' or x.get_text() == '\n':
-            if len(word):
-                yield Word.fromChars(word)
-                word = []
-        else:
-            word.append(x)
+        if hasattr(x,'fontname') and hasattr(x,'bbox'):
+            font = x.fontname
+            if x.get_text() == u'\t\r \xa0' or x.get_text() == '\n':
+                if len(word):
+                    yield Word.fromChars(word)
+                    word = []
+            elif font != pfont or x.get_text() == string.punctuation:
+                # New 'term'
+                if len(word):
+                    yield Word.fromChars(word)
+                word = [x]
+            else:
+                word.append(x)
+
+            pfont = font
 
 def gen_containers_from_page(page):
     for element in page:
