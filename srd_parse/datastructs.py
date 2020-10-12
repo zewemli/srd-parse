@@ -1,4 +1,18 @@
 import string
+import math
+from itertools import product
+
+def get_text(c):
+    t = c.get_text()
+    if t == u'\t\r \xa0':
+        return u" "
+    else:
+        return t
+
+def euclidean(a,b):
+    dx = b[0] - a[0]
+    dy = b[1] - a[1]
+    return math.sqrt( (dx * dx) + (dy * dy) )
 
 class Word:
     def __init__(self):
@@ -15,8 +29,9 @@ class Word:
         
     @classmethod
     def fromChars(Type, chars):
+
         self = Type()
-        self.text = ("".join( c.get_text() for c in chars )).strip()
+        self.text = "".join(map(get_text, chars )).strip()
 
         x0,y0,x1,y1 = chars[0].bbox
         for c in chars[1:]:
@@ -29,14 +44,49 @@ class Word:
         self.x1 = x1
         self.y0 = y0
         self.y1 = y1
-        self.bbox = (x0, y0, x1, y1)
-        self.width = x1 - x0
-        self.height = y1 - y0
-        self.sbox = ((x0, y0), (self.width, self.height))
         self.font = chars[0].fontname
+        self.setDims()
         
         return self
 
+    @classmethod
+    def fromWords(Type, *others):
+        s = Type()
+        s.text = " ".join(x.text for x in others)
+        s.font = others[0].font
+        s.x0 = min(c.x0 for c in others)
+        s.x1 = min(c.x1 for c in others)
+        s.y0 = min(c.y0 for c in others)
+        s.y1 = min(c.y1 for c in others)
+        
+        s.setDims()
+        return s
+        
+
+    def __str__(self):
+        return self.text
+
+    def __hash__(self):
+        return hash(f"{self.text}-{self.bbox}")
+
+    def __eq__(self, other):
+        return (self.text == other.text) and (self.bbox == other.bbox)
+
+    def __lt__(self, other):
+        return self.text < other.text
+
+    def points(self):
+        yield self.x0, self.y0
+        yield self.x0, self.y1
+        yield self.x1, self.y0 
+        yield self.x1, self.y1
+        yield self.midpoint
+
+    def dist(self, to):
+        my_points = list(self.points())
+        to_points = list(to.points())
+        return min( euclidean( a,b ) for a,b in product(my_points, to_points) )
+           
     def setDims(self):
         self.bbox = (self.x0, self.y0, self.x1, self.y1)
         self.width = self.x1 - self.x0
@@ -58,3 +108,10 @@ class Word:
         self.text = d['text']
         self.setDims()
         return self
+
+    def joinLines(self, other):
+        if self.x0 == other.x0 and self.font == other.font:
+            # Merge
+            return [Word.fromWords( self, other )]
+        else:
+            return [self, other]
